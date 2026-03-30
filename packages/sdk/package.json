@@ -1,0 +1,27 @@
+{
+  "name": "@vaultlayer/sdk",
+  "version": "0.1.0",
+  "description": "VaultLayer SDK — continuous, encrypted, verifiable escrow on Shelby + Aptos",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@shelby-protocol/sdk": "latest",
+    "@aptos-labs/ts-sdk": "^1.21.0",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@types/jszip": "^3.4.1",
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  }
+}

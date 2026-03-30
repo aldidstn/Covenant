@@ -1,0 +1,19 @@
+[package]
+name = "vaultlayer"
+version = "0.1.0"
+authors = ["VaultLayer"]
+
+[addresses]
+# Filled in at deploy time via `aptos move publish --named-addresses vaultlayer=<addr>`.
+# During local testing, override in [dev-addresses] below.
+vaultlayer = "_"
+
+[dev-addresses]
+vaultlayer = "0xcafe"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-core.git"
+rev = "mainnet"
+subdir = "aptos-move/framework/aptos-framework"
+
+[dev-dependencies]
