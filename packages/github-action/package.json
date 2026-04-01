@@ -1,0 +1,26 @@
+{
+  "name": "@vaultlayer/github-action",
+  "version": "0.1.0",
+  "description": "GitHub Action — commit source code to VaultLayer escrow on every release",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/main.ts -o dist --license licenses.txt --minify",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@aptos-labs/ts-sdk": "^1.35.0",
+    "@vaultlayer/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.3",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

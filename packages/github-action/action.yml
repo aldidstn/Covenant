@@ -1,0 +1,107 @@
+name: 'VaultLayer Commit'
+description: >
+  Archive HEAD, encrypt client-side, upload to Shelby Protocol, and record
+  the commit on the Aptos VaultLayer escrow smart contract.
+author: 'VaultLayer'
+
+branding:
+  icon: 'lock'
+  color: 'blue'
+
+inputs:
+  # ── Shelby / encryption ────────────────────────────────────────────────────
+  shelby-private-key:
+    description: >
+      Hex-encoded Ed25519 private key for the vendor's Shelby / Aptos account
+      (same key that was used when creating the escrow agreement).
+      Store as a GitHub Actions secret.
+    required: true
+
+  encryption-key:
+    description: >
+      AES-256-GCM encryption key, hex-encoded (64 hex chars = 32 bytes).
+      The source archive is encrypted client-side with this key before upload —
+      VaultLayer never sees your source code.
+      Store as a GitHub Actions secret. Generate once with VaultLayerClient.generateKey().
+    required: true
+
+  encrypted-key:
+    description: >
+      The AES-256 encryption key encrypted with the buyer's Aptos public key,
+      hex-encoded. This is stored on-chain and released to the buyer when a
+      trigger fires. Generate this once during agreement setup and keep it as a
+      GitHub Actions secret.
+    required: true
+
+  shelby-api-key:
+    description: >
+      Optional Shelby API key from geomi.dev. Omit for anonymous access
+      (lower rate limits).
+    required: false
+    default: ''
+
+  expiration-days:
+    description: >
+      Number of days to retain the blob on Shelby. Defaults to 365.
+    required: false
+    default: '365'
+
+  # ── Aptos contract ────────────────────────────────────────────────────────
+  aptos-private-key:
+    description: >
+      Hex-encoded Ed25519 private key used to sign the record_commit transaction
+      on Aptos. Must match the vendor address on the escrow agreement.
+      Store as a GitHub Actions secret.
+    required: true
+
+  contract-address:
+    description: >
+      Aptos address where the VaultLayer escrow module is deployed,
+      e.g. "0x1234...abcd".
+    required: true
+
+  agreement-id:
+    description: >
+      Numeric ID of the Aptos escrow agreement (returned when the agreement
+      was created on-chain).
+    required: true
+
+  aptos-node-url:
+    description: >
+      Aptos fullnode RPC URL.
+    required: false
+    default: 'https://fullnode.mainnet.aptoslabs.com/v1'
+
+  # ── Blob naming ───────────────────────────────────────────────────────────
+  blob-name:
+    description: >
+      Shelby blob name for this deposit. Defaults to "{github.repository}/{github.ref_name}",
+      e.g. "acme/myapp/v1.2.3". Must be unique per Shelby account — re-using a
+      name will fail.
+    required: false
+    default: ''
+
+outputs:
+  content-merkle-root:
+    description: >
+      SHA-256 Merkle root computed over the unencrypted source files. This is
+      what is stored on the Aptos escrow contract and used for buyer inclusion
+      proofs.
+
+  shelby-merkle-root:
+    description: >
+      Merkle root reported by Shelby for the stored blob (storage-layer
+      integrity). May be empty if the Shelby node does not expose it yet.
+
+  blob-name:
+    description: >
+      The exact Shelby blob name used for this deposit.
+
+  account-address:
+    description: >
+      Aptos address of the Shelby account that owns the uploaded blob.
+      Pass this to the buyer so they can locate the blob on Shelby.
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
