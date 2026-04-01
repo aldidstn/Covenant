@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-surface text-slate-200 antialiased;
+    min-height: 100dvh;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white
+           hover:bg-brand-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply rounded-lg border border-surface-border px-4 py-2 text-sm font-medium text-slate-300
+           hover:bg-surface-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-warning {
+    @apply rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white
+           hover:bg-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}
