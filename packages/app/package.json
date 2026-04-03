@@ -13,11 +13,13 @@
     "@aptos-labs/ts-sdk": "^1.35.0",
     "@aptos-labs/wallet-adapter-react": "^4.0.0",
     "@vaultlayer/sdk": "workspace:*",
+    "jszip": "^3.10.1",
     "next": "^15.2.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@types/jszip": "^3.4.1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

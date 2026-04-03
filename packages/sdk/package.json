@@ -16,6 +16,7 @@
   "dependencies": {
     "@shelby-protocol/sdk": "latest",
     "@aptos-labs/ts-sdk": "^1.21.0",
+    "@noble/curves": "^1.4.0",
     "jszip": "^3.10.1"
   },
   "devDependencies": {

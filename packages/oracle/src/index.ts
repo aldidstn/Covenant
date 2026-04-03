@@ -4,16 +4,22 @@
  * Polls Aptos for active escrow agreements whose trigger conditions are
  * satisfied, then submits `execute_trigger` permissionlessly.
  *
+ * Auto-discovers new agreements by sequentially probing agreement IDs
+ * starting from the last known cursor — no manual ID configuration needed.
+ *
  * Configuration (via .env or environment variables):
  *   ORACLE_PRIVATE_KEY     — Ed25519 private key hex (the oracle's wallet)
  *   CONTRACT_ADDRESS       — Deployed vaultlayer::escrow module address
  *   APTOS_NODE_URL         — Aptos fullnode RPC URL
- *   AGREEMENT_IDS          — Comma-separated list of agreement IDs to watch
+ *   SEED_AGREEMENT_IDS     — Optional comma-separated IDs to watch from start
  *   POLL_INTERVAL_MS       — Poll interval in ms (default: 300000 = 5 min)
  *   DRY_RUN                — If "true", skip tx submission (log only)
+ *   STATE_FILE             — Path to JSON state file (default: ./data/state.json)
  */
 
 import 'dotenv/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   Account,
   Aptos,
@@ -30,66 +36,70 @@ function requireEnv(name: string): string {
   return value;
 }
 
-const ORACLE_PRIVATE_KEY  = requireEnv('ORACLE_PRIVATE_KEY');
-const CONTRACT_ADDRESS    = requireEnv('CONTRACT_ADDRESS');
-const APTOS_NODE_URL      = process.env['APTOS_NODE_URL'] ?? 'https://fullnode.mainnet.aptoslabs.com/v1';
-const POLL_INTERVAL_MS    = parseInt(process.env['POLL_INTERVAL_MS'] ?? '300000', 10);
-const DRY_RUN             = process.env['DRY_RUN'] === 'true';
+const ORACLE_PRIVATE_KEY = requireEnv('ORACLE_PRIVATE_KEY');
+const CONTRACT_ADDRESS   = requireEnv('CONTRACT_ADDRESS');
+const APTOS_NODE_URL     = process.env['APTOS_NODE_URL'] ?? 'https://fullnode.mainnet.aptoslabs.com/v1';
+const POLL_INTERVAL_MS   = parseInt(process.env['POLL_INTERVAL_MS'] ?? '300000', 10);
+const DRY_RUN            = process.env['DRY_RUN'] === 'true';
+const STATE_FILE         = process.env['STATE_FILE'] ?? path.join(process.cwd(), 'data', 'state.json');
 
-const rawIds = process.env['AGREEMENT_IDS'] ?? '';
-const AGREEMENT_IDS: bigint[] = rawIds
+/** Optional seed IDs — useful for adding agreements created before the oracle started. */
+const SEED_IDS: bigint[] = (process.env['SEED_AGREEMENT_IDS'] ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)
   .map((s) => BigInt(s));
 
-if (AGREEMENT_IDS.length === 0) {
-  console.error('No AGREEMENT_IDS configured. Set AGREEMENT_IDS=1,2,3 in your .env');
-  process.exit(1);
+// ─── State (persisted to STATE_FILE) ─────────────────────────────────────────
+
+interface PersistedState {
+  /** Highest agreement ID we have ever seen. New IDs are probed above this. */
+  cursor: string;
+  /** IDs confirmed as STATE_TRIGGERED (2) — never re-checked. */
+  triggered: string[];
+  /** All IDs currently being watched (active + pending). */
+  watching: string[];
+}
+
+const DEFAULT_STATE: PersistedState = {
+  cursor: '0',
+  triggered: [],
+  watching: [],
+};
+
+function loadState(): PersistedState {
+  try {
+    const raw = fs.readFileSync(STATE_FILE, 'utf8');
+    return { ...DEFAULT_STATE, ...JSON.parse(raw) } as PersistedState;
+  } catch {
+    return { ...DEFAULT_STATE };
+  }
+}
+
+function saveState(state: PersistedState): void {
+  const dir = path.dirname(STATE_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
 }
 
 // ─── Aptos client ─────────────────────────────────────────────────────────────
 
-const aptos = new Aptos(new AptosConfig({ fullnode: APTOS_NODE_URL }));
+const aptos  = new Aptos(new AptosConfig({ fullnode: APTOS_NODE_URL }));
 const oracle = Account.fromPrivateKey({
   privateKey: new Ed25519PrivateKey(ORACLE_PRIVATE_KEY),
 });
 
-// ─── State ────────────────────────────────────────────────────────────────────
-
-/** IDs that have already been triggered in this session (or confirmed triggered on-chain). */
-const triggered = new Set<bigint>();
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Logging ──────────────────────────────────────────────────────────────────
 
 function log(level: 'INFO' | 'WARN' | 'ERROR', msg: string): void {
-  const ts = new Date().toISOString();
-  console.log(`[${ts}] [${level}] ${msg}`);
+  console.log(`[${new Date().toISOString()}] [${level}] ${msg}`);
 }
 
-/**
- * Call the `is_trigger_met` view function on-chain.
- * Returns false (not an error) if the agreement doesn't exist or isn't active.
- */
-async function isTriggerMet(agreementId: bigint): Promise<boolean> {
-  try {
-    const [met] = await aptos.view({
-      payload: {
-        function: `${CONTRACT_ADDRESS}::escrow::is_trigger_met`,
-        functionArguments: [agreementId.toString()],
-      },
-    });
-    return Boolean(met);
-  } catch (err) {
-    // Agreement may not exist yet or the node may be temporarily unavailable.
-    log('WARN', `is_trigger_met(${agreementId}) error: ${String(err)}`);
-    return false;
-  }
-}
+// ─── Chain queries ────────────────────────────────────────────────────────────
 
 /**
- * Call `get_state` to confirm whether an agreement is still active (state == 1).
- * Used to skip agreements that were already triggered between polls.
+ * Returns the on-chain state of an agreement, or -1 if not found.
+ *   0 = PENDING, 1 = ACTIVE, 2 = TRIGGERED, -1 = not found
  */
 async function getState(agreementId: bigint): Promise<number> {
   try {
@@ -101,14 +111,58 @@ async function getState(agreementId: bigint): Promise<number> {
     });
     return Number(state);
   } catch {
-    return -1; // unknown / not found
+    return -1;
   }
 }
 
 /**
- * Submit `execute_trigger` for the given agreement.
- * The function is permissionless — the oracle's key is only needed to pay gas.
+ * Returns true if `is_trigger_met` returns true for an active agreement.
  */
+async function isTriggerMet(agreementId: bigint): Promise<boolean> {
+  try {
+    const [met] = await aptos.view({
+      payload: {
+        function: `${CONTRACT_ADDRESS}::escrow::is_trigger_met`,
+        functionArguments: [agreementId.toString()],
+      },
+    });
+    return Boolean(met);
+  } catch (err) {
+    log('WARN', `is_trigger_met(${agreementId}) error: ${String(err)}`);
+    return false;
+  }
+}
+
+// ─── Auto-discovery ───────────────────────────────────────────────────────────
+
+/**
+ * Probe agreement IDs starting from `cursor + 1` until we get a "not found"
+ * response. Agreement IDs are sequential (the contract increments next_id),
+ * so any gap means we've reached the end.
+ *
+ * Returns the list of newly discovered IDs and the updated cursor.
+ */
+async function discoverNewAgreements(
+  cursor: bigint,
+): Promise<{ found: bigint[]; newCursor: bigint }> {
+  const found: bigint[] = [];
+  let probeId = cursor + 1n;
+  const PROBE_LIMIT = 100n; // safety cap per poll cycle
+
+  while (probeId - cursor <= PROBE_LIMIT) {
+    const state = await getState(probeId);
+    if (state === -1) break; // no agreement at this ID — stop probing
+    found.push(probeId);
+    log('INFO', `Discovered new agreement #${probeId} (state=${state})`);
+    probeId++;
+  }
+
+  const newCursor = found.length > 0 ? found[found.length - 1]! : cursor;
+  return { found, newCursor };
+}
+
+// ─── Trigger execution ────────────────────────────────────────────────────────
+
 async function executeTrigger(agreementId: bigint): Promise<string> {
   const transaction = await aptos.transaction.build.simple({
     sender: oracle.accountAddress,
@@ -119,7 +173,7 @@ async function executeTrigger(agreementId: bigint): Promise<string> {
   });
 
   const senderAuth = aptos.transaction.sign({ signer: oracle, transaction });
-  const response = await aptos.transaction.submit.simple({
+  const response   = await aptos.transaction.submit.simple({
     transaction,
     senderAuthenticator: senderAuth,
   });
@@ -128,21 +182,46 @@ async function executeTrigger(agreementId: bigint): Promise<string> {
   return response.hash;
 }
 
-// ─── Poll loop ────────────────────────────────────────────────────────────────
+// ─── Main poll cycle ──────────────────────────────────────────────────────────
 
-async function poll(): Promise<void> {
-  log('INFO', `Polling ${AGREEMENT_IDS.length} agreement(s)...`);
+async function poll(state: PersistedState): Promise<void> {
+  let cursor    = BigInt(state.cursor);
+  const triggered = new Set<bigint>(state.triggered.map(BigInt));
+  const watching  = new Set<bigint>(state.watching.map(BigInt));
 
-  for (const id of AGREEMENT_IDS) {
-    if (triggered.has(id)) {
-      // Already executed in a previous cycle; verify on-chain state once more.
-      const state = await getState(id);
-      if (state === 2) {
-        // Confirmed triggered — nothing to do.
-        continue;
-      }
-      // State changed back somehow (unlikely) — reset local cache.
-      triggered.delete(id);
+  // Merge seed IDs
+  for (const id of SEED_IDS) {
+    if (!watching.has(id) && !triggered.has(id)) {
+      watching.add(id);
+      if (id > cursor) cursor = id;
+      log('INFO', `Seeded agreement #${id} from SEED_AGREEMENT_IDS`);
+    }
+  }
+
+  // ── Discover new agreements ───────────────────────────────────────────────
+  const { found, newCursor } = await discoverNewAgreements(cursor);
+  for (const id of found) {
+    if (!triggered.has(id)) watching.add(id);
+  }
+  cursor = newCursor;
+
+  log('INFO', `Watching ${watching.size} agreement(s) (cursor=${cursor})`);
+
+  // ── Check and execute triggers ────────────────────────────────────────────
+  for (const id of watching) {
+    if (triggered.has(id)) continue;
+
+    // Confirm still active on-chain (may have been triggered by someone else)
+    const onChainState = await getState(id);
+    if (onChainState === 2) {
+      log('INFO', `Agreement #${id}: already triggered on-chain — removing from watch list`);
+      triggered.add(id);
+      watching.delete(id);
+      continue;
+    }
+    if (onChainState !== 1) {
+      // PENDING or not found — skip without logging spam
+      continue;
     }
 
     const met = await isTriggerMet(id);
@@ -156,18 +235,26 @@ async function poll(): Promise<void> {
     if (DRY_RUN) {
       log('INFO', `[DRY RUN] Would submit execute_trigger for agreement #${id}`);
       triggered.add(id);
+      watching.delete(id);
       continue;
     }
 
     try {
       const txHash = await executeTrigger(id);
-      log('INFO', `Agreement #${id}: execute_trigger submitted — tx ${txHash}`);
+      log('INFO', `Agreement #${id}: trigger executed — tx ${txHash}`);
       triggered.add(id);
+      watching.delete(id);
     } catch (err) {
       log('ERROR', `Agreement #${id}: execute_trigger failed — ${String(err)}`);
-      // Do not add to triggered set; will retry next poll.
+      // Keep in watching set; will retry next poll.
     }
   }
+
+  // ── Persist updated state ─────────────────────────────────────────────────
+  state.cursor    = cursor.toString();
+  state.triggered = [...triggered].map(String);
+  state.watching  = [...watching].map(String);
+  saveState(state);
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
@@ -178,23 +265,26 @@ async function main(): Promise<void> {
   log('INFO', `Oracle address  : ${oracle.accountAddress.toString()}`);
   log('INFO', `Contract        : ${CONTRACT_ADDRESS}`);
   log('INFO', `Node URL        : ${APTOS_NODE_URL}`);
-  log('INFO', `Watching IDs    : ${AGREEMENT_IDS.join(', ')}`);
   log('INFO', `Poll interval   : ${POLL_INTERVAL_MS / 1000}s`);
+  log('INFO', `State file      : ${STATE_FILE}`);
   log('INFO', `Dry run         : ${DRY_RUN}`);
   log('INFO', '─────────────────────────────────────────');
 
-  // Run once immediately, then on interval.
-  await poll();
-  const timer = setInterval(poll, POLL_INTERVAL_MS);
+  const state = loadState();
+  log('INFO', `Resuming from cursor=${state.cursor}, watching=[${state.watching.join(',')}], triggered=[${state.triggered.join(',')}]`);
 
-  // Graceful shutdown.
+  // Run one cycle immediately, then on interval.
+  await poll(state);
+  const timer = setInterval(() => poll(state), POLL_INTERVAL_MS);
+
   const shutdown = (signal: string) => {
-    log('INFO', `${signal} received — shutting down`);
+    log('INFO', `${signal} received — saving state and shutting down`);
+    saveState(state);
     clearInterval(timer);
     process.exit(0);
   };
 
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGINT',  () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 

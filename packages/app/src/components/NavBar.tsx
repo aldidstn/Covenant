@@ -7,6 +7,7 @@ import { WalletButton } from './WalletButton';
 const LINKS = [
   { href: '/vendor', label: 'Vendor' },
   { href: '/buyer', label: 'Buyer' },
+  { href: '/registry', label: 'Registry' },
 ];
 
 export function NavBar() {

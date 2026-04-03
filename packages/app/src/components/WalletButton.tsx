@@ -19,13 +19,13 @@ export function WalletButton() {
           className="flex items-center gap-2 rounded-lg border border-surface-border bg-surface-card px-3 py-1.5 text-sm font-mono text-slate-300 hover:border-brand/50 transition-colors"
         >
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          {truncate(account.address)}
+          {truncate(account.address.toString())}
         </button>
 
         {open && (
           <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-surface-border bg-surface-card shadow-xl">
             <div className="px-3 py-2 text-xs text-slate-500 font-mono border-b border-surface-border">
-              {truncate(account.address)}
+              {truncate(account.address.toString())}
             </div>
             <button
               onClick={() => { disconnect(); setOpen(false); }}

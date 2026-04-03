@@ -83,3 +83,53 @@ export async function fetchAgreementOnChain(agreementId: number) {
   ]);
   return { state, merkleRoot, timestamps, triggerMet };
 }
+
+// ─── Registry ─────────────────────────────────────────────────────────────────
+
+export interface RegistryEntry {
+  id: number;
+  state: number;
+  expiryTimestamp: number;
+  lastCommitAt: number;
+}
+
+/**
+ * Probe sequential agreement IDs to build a paginated registry.
+ * The contract assigns IDs starting from 1 with no gaps, so we probe
+ * upward until we get a "not found" error.
+ *
+ * @param fromId  First ID to probe (1-based). Use 1 for the first page.
+ * @param limit   Max entries to return per page.
+ * @returns entries found and the next fromId to use for the following page
+ *          (or null if there are no more agreements).
+ */
+export async function fetchRegistryPage(
+  fromId: number,
+  limit: number,
+): Promise<{ entries: RegistryEntry[]; nextFromId: number | null }> {
+  const entries: RegistryEntry[] = [];
+  let id = fromId;
+
+  while (entries.length < limit) {
+    let state: number;
+    try {
+      state = await fetchState(id);
+    } catch {
+      // No agreement at this ID — end of registry.
+      return { entries, nextFromId: null };
+    }
+
+    let expiryTimestamp = 0;
+    let lastCommitAt    = 0;
+    try {
+      const ts = await fetchTimestamps(id);
+      expiryTimestamp = ts.expiryTimestamp;
+      lastCommitAt    = ts.lastCommitAt;
+    } catch { /* non-fatal */ }
+
+    entries.push({ id, state, expiryTimestamp, lastCommitAt });
+    id++;
+  }
+
+  return { entries, nextFromId: id };
+}

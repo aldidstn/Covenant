@@ -36,7 +36,10 @@ COPY --from=builder /app/packages/oracle/dist ./packages/oracle/dist
 
 WORKDIR /app/packages/oracle
 
-# Required env vars (override at runtime via --env-file or -e flags)
+# State file persisted here — mount a volume so it survives container restarts:
+#   docker run -v vaultlayer-oracle-data:/app/packages/oracle/data ...
+VOLUME ["/app/packages/oracle/data"]
+
 ENV NODE_ENV=production
 
 CMD ["node", "dist/index.js"]

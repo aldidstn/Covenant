@@ -286,7 +286,7 @@ export default function VendorDashboard() {
   // Load local agreements then hydrate with on-chain data
   const load = useCallback(() => {
     if (!account?.address) return;
-    const metas = getAgreements(account.address);
+    const metas = getAgreements(account.address.toString());
     setRows(metas.map((m) => ({ ...m, loading: true })));
 
     metas.forEach(async (m) => {
@@ -322,13 +322,13 @@ export default function VendorDashboard() {
 
   function handleAdd(meta: AgreementMeta) {
     if (!account?.address) return;
-    saveAgreement(account.address, meta);
+    saveAgreement(account.address.toString(), meta);
     load();
   }
 
   function handleRemove(id: number) {
     if (!account?.address) return;
-    removeAgreement(account.address, id);
+    removeAgreement(account.address.toString(), id);
     setRows((r) => r.filter((x) => x.id !== id));
   }
 
