@@ -89,7 +89,7 @@ export default function RegistryPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-100">Public Escrow Registry</h1>
           <p className="text-sm text-slate-400 mt-1">
-            All escrow agreements deployed on the VaultLayer contract. No wallet required.
+            All escrow agreements deployed on the Covenant contract. No wallet required.
           </p>
         </div>
         <button
@@ -108,13 +108,13 @@ export default function RegistryPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-surface-border bg-surface-card overflow-hidden">
+      <div className="rounded-xl border border-surface-border bg-surface-card overflow-x-auto">
         {entries.length === 0 && initialized && !loading ? (
           <div className="px-6 py-12 text-center text-slate-500 text-sm">
             No escrow agreements found on this contract.
           </div>
         ) : (
-          <table className="w-full text-left">
+          <table className="w-full min-w-[600px] text-left">
             <thead>
               <tr className="border-b border-surface-border bg-surface">
                 <th className="px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
@@ -128,13 +128,15 @@ export default function RegistryPage() {
               {entries.map((entry) => (
                 <AgreementRow key={entry.id} entry={entry} />
               ))}
-              {loading && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-4 text-center text-xs text-slate-500 animate-pulse">
-                    Loading agreements…
-                  </td>
+              {loading && Array.from({ length: 5 }).map((_, i) => (
+                <tr key={`skel-${i}`} className="border-b border-surface-border animate-pulse">
+                  <td className="px-4 py-3"><div className="h-4 w-8 rounded bg-surface-border" /></td>
+                  <td className="px-4 py-3"><div className="h-5 w-16 rounded bg-surface-border" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-24 rounded bg-surface-border" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-24 rounded bg-surface-border" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-12 rounded bg-surface-border ml-auto" /></td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         )}

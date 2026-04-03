@@ -16,22 +16,26 @@ const STEPS = ['Agreement details', 'Encryption setup', 'Review & submit', 'Done
 
 function StepIndicator({ current }: { current: number }) {
   return (
-    <ol className="flex gap-0">
+    <ol className="flex gap-0" aria-label="Agreement creation steps">
       {STEPS.map((label, i) => (
-        <li key={i} className="flex items-center">
+        <li
+          key={i}
+          className="flex items-center"
+          aria-current={i === current ? 'step' : undefined}
+        >
           <div className="flex flex-col items-center">
             <div
-              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold border ${
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold border-2 ${
                 i < current
                   ? 'bg-brand border-brand text-white'
                   : i === current
-                  ? 'border-brand text-brand bg-surface-card'
+                  ? 'border-brand text-brand bg-surface-card ring-2 ring-brand/30'
                   : 'border-surface-border text-slate-600 bg-surface-card'
               }`}
             >
               {i < current ? '✓' : i + 1}
             </div>
-            <span className={`mt-1 text-xs whitespace-nowrap ${i === current ? 'text-slate-200' : 'text-slate-600'}`}>
+            <span className={`mt-1 text-xs whitespace-nowrap ${i === current ? 'text-slate-200 font-semibold' : 'text-slate-600'}`}>
               {label}
             </span>
           </div>
@@ -200,12 +204,12 @@ function Step2({
           </div>
 
           <CopyBox
-            label="VAULTLAYER_ENCRYPTION_KEY — save as GitHub Action secret"
+            label="COVENANT_ENCRYPTION_KEY — save as GitHub Action secret"
             value={result.rawAesKeyHex}
           />
           <p className="text-xs text-slate-500 -mt-1">
             This is your archive encryption key. Store it securely and never share it.
-            Add it to your repo as <code className="text-brand">VAULTLAYER_ENCRYPTION_KEY</code>.
+            Add it to your repo as <code className="text-brand">COVENANT_ENCRYPTION_KEY</code>.
           </p>
 
           <CopyBox
@@ -302,7 +306,7 @@ function Step4({ agreementId, s1, s2Result }: { agreementId: number | null; s1: 
   return (
     <div className="space-y-5">
       <div className="text-center space-y-2">
-        <div className="text-4xl">🎉</div>
+        <div className="text-4xl" aria-hidden="true">🎉</div>
         <p className="text-xl font-semibold text-slate-100">Agreement created!</p>
         {agreementId !== null ? (
           <p className="text-slate-400 text-sm">
@@ -318,9 +322,9 @@ function Step4({ agreementId, s1, s2Result }: { agreementId: number | null; s1: 
 
       <div className="space-y-3">
         <p className="text-sm font-medium text-slate-300">GitHub Action secrets to configure</p>
-        <CopyBox label="VAULTLAYER_AGREEMENT_ID" value={String(agreementId ?? '')} />
-        <CopyBox label="VAULTLAYER_ENCRYPTION_KEY" value={s2Result.rawAesKeyHex} />
-        <CopyBox label="VAULTLAYER_SHELBY_ACCOUNT (for reference)" value={s1.shelbyAccount} />
+        <CopyBox label="COVENANT_AGREEMENT_ID" value={String(agreementId ?? '')} />
+        <CopyBox label="COVENANT_ENCRYPTION_KEY" value={s2Result.rawAesKeyHex} />
+        <CopyBox label="COVENANT_SHELBY_ACCOUNT (for reference)" value={s1.shelbyAccount} />
       </div>
 
       <div className="rounded-lg border border-surface-border bg-surface p-4 text-sm text-slate-400 space-y-1">

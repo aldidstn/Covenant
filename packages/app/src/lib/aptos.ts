@@ -98,6 +98,8 @@ export interface RegistryEntry {
  * The contract assigns IDs starting from 1 with no gaps, so we probe
  * upward until we get a "not found" error.
  *
+ * Fetches in parallel batches for performance (BATCH_SIZE concurrent calls).
+ *
  * @param fromId  First ID to probe (1-based). Use 1 for the first page.
  * @param limit   Max entries to return per page.
  * @returns entries found and the next fromId to use for the following page
@@ -107,29 +109,42 @@ export async function fetchRegistryPage(
   fromId: number,
   limit: number,
 ): Promise<{ entries: RegistryEntry[]; nextFromId: number | null }> {
+  const BATCH_SIZE = 5;
   const entries: RegistryEntry[] = [];
   let id = fromId;
+  let reachedEnd = false;
 
-  while (entries.length < limit) {
-    let state: number;
-    try {
-      state = await fetchState(id);
-    } catch {
-      // No agreement at this ID — end of registry.
-      return { entries, nextFromId: null };
+  while (entries.length < limit && !reachedEnd) {
+    const batchIds = Array.from(
+      { length: Math.min(BATCH_SIZE, limit - entries.length) },
+      (_, i) => id + i,
+    );
+
+    const results = await Promise.allSettled(
+      batchIds.map(async (probeId) => {
+        const state = await fetchState(probeId);
+        let expiryTimestamp = 0;
+        let lastCommitAt = 0;
+        try {
+          const ts = await fetchTimestamps(probeId);
+          expiryTimestamp = ts.expiryTimestamp;
+          lastCommitAt = ts.lastCommitAt;
+        } catch { /* non-fatal */ }
+        return { id: probeId, state, expiryTimestamp, lastCommitAt } as RegistryEntry;
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        entries.push(result.value);
+      } else {
+        reachedEnd = true;
+        break;
+      }
     }
 
-    let expiryTimestamp = 0;
-    let lastCommitAt    = 0;
-    try {
-      const ts = await fetchTimestamps(id);
-      expiryTimestamp = ts.expiryTimestamp;
-      lastCommitAt    = ts.lastCommitAt;
-    } catch { /* non-fatal */ }
-
-    entries.push({ id, state, expiryTimestamp, lastCommitAt });
-    id++;
+    id += batchIds.length;
   }
 
-  return { entries, nextFromId: id };
+  return { entries, nextFromId: reachedEnd ? null : id };
 }

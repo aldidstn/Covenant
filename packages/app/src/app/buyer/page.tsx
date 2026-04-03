@@ -247,10 +247,19 @@ function ZipViewer({ entries }: { entries: ZipEntry[] }) {
     URL.revokeObjectURL(url);
   }
 
-  function downloadAll(allEntries: ZipEntry[]) {
-    // Re-pack into a zip and download — requires JSZip which is already a dep of the SDK.
-    // We do a simple sequential download instead to avoid adding another import.
-    for (const entry of allEntries) downloadEntry(entry);
+  async function downloadAll(allEntries: ZipEntry[]) {
+    const JSZip = (await import('jszip')).default;
+    const zip = new JSZip();
+    for (const entry of allEntries) {
+      zip.file(entry.path, entry.data);
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'covenant-source.zip';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (

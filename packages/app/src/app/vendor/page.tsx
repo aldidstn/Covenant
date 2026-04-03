@@ -2,10 +2,47 @@
 
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import Link from 'next/link';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchAgreementOnChain } from '@/lib/aptos';
 import { getAgreements, saveAgreement, removeAgreement, type AgreementMeta } from '@/lib/storage';
 import { STATE_LABEL, STATE_CLASS, GRACE_PERIOD_SECONDS } from '@/lib/constants';
+
+// ─── Focus trap hook ─────────────────────────────────────────────────────────
+
+function useFocusTrap(active: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!active || !ref.current) return;
+    const el = ref.current;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    // Focus the first focusable element
+    const focusable = el.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    focusable[0]?.focus();
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Tab' || focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+
+    el.addEventListener('keydown', handleKeyDown);
+    return () => {
+      el.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [active]);
+
+  return ref;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,11 +61,14 @@ interface AgreementRow extends AgreementMeta {
 
 function formatRelative(unixSec: number): string {
   const diff = unixSec - Math.floor(Date.now() / 1000);
+  if (diff === 0) return 'now';
   const abs = Math.abs(diff);
-  if (abs < 60) return `${diff > 0 ? 'in ' : ''}${abs}s${diff < 0 ? ' ago' : ''}`;
-  if (abs < 3600) return `${diff > 0 ? 'in ' : ''}${Math.floor(abs / 60)}m${diff < 0 ? ' ago' : ''}`;
-  if (abs < 86400) return `${diff > 0 ? 'in ' : ''}${Math.floor(abs / 3600)}h${diff < 0 ? ' ago' : ''}`;
-  return `${diff > 0 ? 'in ' : ''}${Math.floor(abs / 86400)}d${diff < 0 ? ' ago' : ''}`;
+  const suffix = diff > 0 ? '' : ' ago';
+  const prefix = diff > 0 ? 'in ' : '';
+  if (abs < 60) return `${prefix}${abs}s${suffix}`;
+  if (abs < 3600) return `${prefix}${Math.floor(abs / 60)}m${suffix}`;
+  if (abs < 86400) return `${prefix}${Math.floor(abs / 3600)}h${suffix}`;
+  return `${prefix}${Math.floor(abs / 86400)}d${suffix}`;
 }
 
 function freshnessClass(lastCommitAt: number): string {
@@ -47,6 +87,7 @@ function AddAgreementForm({
   onAdd: (meta: AgreementMeta) => void;
   onClose: () => void;
 }) {
+  const trapRef = useFocusTrap(true);
   const [form, setForm] = useState({
     id: '',
     label: '',
@@ -71,24 +112,33 @@ function AddAgreementForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <form
-        onSubmit={submit}
-        className="w-full max-w-md rounded-xl border border-surface-border bg-surface-card p-6 shadow-2xl"
-      >
-        <h2 className="mb-4 text-lg font-semibold text-slate-100">Track Agreement</h2>
-        <div className="space-y-3">
-          <Field label="Agreement ID *" type="number" value={form.id} onChange={(v) => setForm((f) => ({ ...f, id: v }))} required />
-          <Field label="Label" value={form.label} onChange={(v) => setForm((f) => ({ ...f, label: v }))} placeholder="MyApp — Acme Corp" />
-          <Field label="Blob name" value={form.blobName} onChange={(v) => setForm((f) => ({ ...f, blobName: v }))} placeholder="acme/myapp/v1.0.0" />
-          <Field label="Buyer address" value={form.buyerAddress} onChange={(v) => setForm((f) => ({ ...f, buyerAddress: v }))} placeholder="0x…" />
-          <Field label="Shelby account" value={form.shelbyAccount} onChange={(v) => setForm((f) => ({ ...f, shelbyAccount: v }))} placeholder="0x… (your Shelby/Aptos address)" />
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="btn-ghost">Cancel</button>
-          <button type="submit" className="btn-primary">Add</button>
-        </div>
-      </form>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-dialog-title"
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div ref={trapRef}>
+        <form
+          onSubmit={submit}
+          className="w-full max-w-md rounded-xl border border-surface-border bg-surface-card p-6 shadow-2xl"
+        >
+          <h2 id="add-dialog-title" className="mb-4 text-lg font-semibold text-slate-100">Track Agreement</h2>
+          <div className="space-y-3">
+            <Field label="Agreement ID *" type="number" value={form.id} onChange={(v) => setForm((f) => ({ ...f, id: v }))} required />
+            <Field label="Label" value={form.label} onChange={(v) => setForm((f) => ({ ...f, label: v }))} placeholder="MyApp — Acme Corp" />
+            <Field label="Blob name" value={form.blobName} onChange={(v) => setForm((f) => ({ ...f, blobName: v }))} placeholder="acme/myapp/v1.0.0" />
+            <Field label="Buyer address" value={form.buyerAddress} onChange={(v) => setForm((f) => ({ ...f, buyerAddress: v }))} placeholder="0x…" />
+            <Field label="Shelby account" value={form.shelbyAccount} onChange={(v) => setForm((f) => ({ ...f, shelbyAccount: v }))} placeholder="0x… (your Shelby/Aptos address)" />
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="btn-ghost">Cancel</button>
+            <button type="submit" className="btn-primary">Add</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -146,11 +196,18 @@ function AgreementCard({
             <p className="font-mono text-xs text-slate-500 mt-0.5">{row.blobName}</p>
           )}
         </div>
-        <button onClick={onRemove} className="text-slate-600 hover:text-slate-400 text-xs">✕</button>
+        <button onClick={onRemove} aria-label={`Remove agreement #${row.id}`} className="text-slate-600 hover:text-slate-400 text-xs">✕</button>
       </div>
 
       {row.loading && (
-        <p className="text-xs text-slate-500 animate-pulse">Loading on-chain data…</p>
+        <div className="space-y-3 animate-pulse">
+          <div className="grid grid-cols-3 gap-3">
+            <div><div className="h-3 w-12 rounded bg-surface-border mb-1.5" /><div className="h-4 w-16 rounded bg-surface-border" /></div>
+            <div><div className="h-3 w-12 rounded bg-surface-border mb-1.5" /><div className="h-4 w-16 rounded bg-surface-border" /></div>
+            <div><div className="h-3 w-12 rounded bg-surface-border mb-1.5" /><div className="h-4 w-16 rounded bg-surface-border" /></div>
+          </div>
+          <div className="h-3 w-48 rounded bg-surface-border" />
+        </div>
       )}
 
       {row.error && (
@@ -215,6 +272,7 @@ function ActionModal({
   onClose: () => void;
   onConfirm: (payload: Record<string, string>) => Promise<void>;
 }) {
+  const trapRef = useFocusTrap(true);
   const [newExpiry, setNewExpiry] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -241,33 +299,42 @@ function ActionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <form onSubmit={submit} className="w-full max-w-md rounded-xl border border-surface-border bg-surface-card p-6 shadow-2xl space-y-4">
-        <h2 className="text-lg font-semibold text-slate-100">{titles[action]}</h2>
-        <p className="text-sm text-slate-400">{descriptions[action]}</p>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="action-dialog-title"
+      onKeyDown={(e) => { if (e.key === 'Escape' && !busy) onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}
+    >
+      <div ref={trapRef}>
+        <form onSubmit={submit} className="w-full max-w-md rounded-xl border border-surface-border bg-surface-card p-6 shadow-2xl space-y-4">
+          <h2 id="action-dialog-title" className="text-lg font-semibold text-slate-100">{titles[action]}</h2>
+          <p className="text-sm text-slate-400">{descriptions[action]}</p>
 
-        {action === 'renew' && (
-          <label className="block">
-            <span className="mb-1 block text-xs text-slate-400">New expiry date</span>
-            <input
-              type="datetime-local"
-              value={newExpiry}
-              onChange={(e) => setNewExpiry(e.target.value)}
-              required
-              className="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-200 focus:border-brand/50 focus:outline-none"
-            />
-          </label>
-        )}
+          {action === 'renew' && (
+            <label className="block">
+              <span className="mb-1 block text-xs text-slate-400">New expiry date</span>
+              <input
+                type="datetime-local"
+                value={newExpiry}
+                onChange={(e) => setNewExpiry(e.target.value)}
+                required
+                className="w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm text-slate-200 focus:border-brand/50 focus:outline-none"
+              />
+            </label>
+          )}
 
-        {err && <p className="text-xs text-red-400">{err}</p>}
+          {err && <p className="text-xs text-red-400" role="alert">{err}</p>}
 
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} disabled={busy} className="btn-ghost">Cancel</button>
-          <button type="submit" disabled={busy} className={action === 'eol' ? 'btn-warning' : 'btn-primary'}>
-            {busy ? 'Sending…' : 'Confirm'}
-          </button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} disabled={busy} className="btn-ghost">Cancel</button>
+            <button type="submit" disabled={busy} className={action === 'eol' ? 'btn-warning' : 'btn-primary'}>
+              {busy ? 'Sending…' : 'Confirm'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -363,7 +430,7 @@ export default function VendorDashboard() {
   if (!connected || !account) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
-        <div className="text-4xl">🔒</div>
+        <div className="text-4xl" aria-hidden="true">🔒</div>
         <p className="text-slate-300 font-medium">Connect your wallet to view your escrow agreements.</p>
         <p className="text-sm text-slate-500">Your agreements are loaded from the Aptos blockchain using your wallet address.</p>
       </div>
