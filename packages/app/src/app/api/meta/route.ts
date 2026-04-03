@@ -7,19 +7,19 @@
 // to manual JSON paste.
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { VaultLayerClient } from '@vaultlayer/sdk';
+import { CovenantClient } from '@covenant/sdk';
 
 const SERVICE_KEY = process.env.SHELBY_SERVICE_PRIVATE_KEY;
 const META_SUFFIX = '__meta';
 
-let _client: VaultLayerClient | null = null;
+let _client: CovenantClient | null = null;
 
-function getClient(): VaultLayerClient {
+function getClient(): CovenantClient {
   if (!SERVICE_KEY) {
     throw new Error('SHELBY_SERVICE_PRIVATE_KEY is not configured.');
   }
   if (!_client) {
-    _client = new VaultLayerClient({ shelbyPrivateKey: SERVICE_KEY });
+    _client = new CovenantClient({ shelbyPrivateKey: SERVICE_KEY });
   }
   return _client;
 }

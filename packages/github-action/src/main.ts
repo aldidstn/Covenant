@@ -8,7 +8,7 @@ import {
   MoveVector,
   U64,
 } from '@aptos-labs/ts-sdk';
-import { VaultLayerClient } from '@vaultlayer/sdk';
+import { CovenantClient } from '@covenant/sdk';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -124,8 +124,8 @@ async function run(): Promise<void> {
     const archiveData = Buffer.concat(chunks);
     core.info(`Archive size: ${(archiveData.length / 1024).toFixed(1)} KB`);
 
-    // ── Upload to Shelby via VaultLayer SDK ──────────────────────────────────
-    const client = new VaultLayerClient({
+    // ── Upload to Shelby via Covenant SDK ───────────────────────────────────
+    const client = new CovenantClient({
       shelbyPrivateKey,
       shelbyApiKey,
       network: 'shelbynet',
@@ -173,7 +173,7 @@ async function run(): Promise<void> {
     });
 
     core.info(`Aptos transaction   : ${txHash}`);
-    core.info('VaultLayer commit recorded successfully.');
+    core.info('Covenant commit recorded successfully.');
   } catch (err) {
     core.setFailed(err instanceof Error ? err.message : String(err));
   }

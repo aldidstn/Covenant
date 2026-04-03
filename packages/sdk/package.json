@@ -1,7 +1,7 @@
 {
-  "name": "@vaultlayer/sdk",
+  "name": "@covenant/sdk",
   "version": "0.1.0",
-  "description": "VaultLayer SDK — continuous, encrypted, verifiable escrow on Shelby + Aptos",
+  "description": "Covenant SDK — continuous, encrypted, verifiable escrow on Shelby + Aptos",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {

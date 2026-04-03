@@ -1,6 +1,6 @@
 // ─── Configuration ───────────────────────────────────────────────────────────
 
-export interface VaultLayerConfig {
+export interface CovenantConfig {
   /** Shelby API key from geomi.dev. Omit for anonymous (lower rate limits). */
   shelbyApiKey?: string;
   /** Hex-encoded Ed25519 private key for the vendor's Aptos / Shelby account. */
@@ -24,9 +24,9 @@ export interface CommitOptions {
    */
   blobName: string;
   /**
-   * 32-byte AES-256-GCM encryption key. VaultLayer never sees this —
+   * 32-byte AES-256-GCM encryption key. Covenant never sees this —
    * the archive is encrypted client-side before being sent to Shelby.
-   * Generate with `VaultLayerClient.generateKey()`.
+   * Generate with `CovenantClient.generateKey()`.
    */
   encryptionKey: Buffer;
   /** Days to retain the blob on Shelby. Defaults to 365. */

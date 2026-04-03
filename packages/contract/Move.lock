@@ -34,7 +34,7 @@ use_environment = "testnet"
 manifest_digest = "7AFB66695545775FBFBB2D3078ADFD084244D5002392E837FDE21D9EA1C6D01C"
 deps = { MoveStdlib = "MoveStdlib" }
 
-[pinned.testnet.vaultlayer]
+[pinned.testnet.covenant]
 source = { root = true }
 use_environment = "testnet"
 manifest_digest = "DD02312DE2A8A8268BF3BF1BF8770F8A2C41C5CB24388F65F0F5E9C2EF4763AB"

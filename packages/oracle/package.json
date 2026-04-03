@@ -1,7 +1,7 @@
 {
-  "name": "@vaultlayer/oracle",
+  "name": "@covenant/oracle",
   "version": "0.1.0",
-  "description": "Non-renewal trigger oracle for VaultLayer escrow agreements",
+  "description": "Non-renewal trigger oracle for Covenant escrow agreements",
   "private": true,
   "main": "dist/index.js",
   "scripts": {

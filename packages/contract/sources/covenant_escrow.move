@@ -1,4 +1,4 @@
-/// VaultLayer Escrow — Phase 1
+/// Covenant Escrow — Phase 1
 ///
 /// Stores escrow agreements between a software vendor and a buyer on Aptos.
 /// Each agreement references a source-code blob on Shelby Protocol and
@@ -14,7 +14,7 @@
 /// containing the Shelby blob location and the buyer-encrypted symmetric key.
 /// The buyer decrypts the key with their private key, then fetches and
 /// decrypts the source archive from Shelby.
-module vaultlayer::escrow {
+module covenant::escrow {
 
     use std::string::String;
     use std::signer;
@@ -64,7 +64,7 @@ module vaultlayer::escrow {
         blob_name: String,
 
         /// SHA-256 content Merkle root of the unencrypted source files,
-        /// computed by the VaultLayer SDK before encryption.
+        /// computed by the Covenant SDK before encryption.
         content_merkle_root: vector<u8>,
 
         /// Merkle root reported by Shelby for the stored blob (storage integrity).
@@ -94,7 +94,7 @@ module vaultlayer::escrow {
         last_commit_at: u64,
     }
 
-    /// Singleton resource stored under the vaultlayer module address.
+    /// Singleton resource stored under the covenant module address.
     struct GlobalRegistry has key {
         agreements: Table<u64, EscrowAgreement>,
         next_id: u64,
@@ -188,7 +188,7 @@ module vaultlayer::escrow {
         let now = timestamp::now_seconds();
         assert!(expiry_timestamp > now, E_EXPIRY_IN_PAST);
 
-        let registry = borrow_global_mut<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global_mut<GlobalRegistry>(@covenant);
         let id = registry.next_id;
         registry.next_id = id + 1;
 
@@ -227,7 +227,7 @@ module vaultlayer::escrow {
         buyer: &signer,
         agreement_id: u64,
     ) {
-        let registry = borrow_global_mut<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global_mut<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
 
         let agreement = table::borrow_mut(&mut registry.agreements, agreement_id);
@@ -256,7 +256,7 @@ module vaultlayer::escrow {
         iv: vector<u8>,
         auth_tag: vector<u8>,
     ) {
-        let registry = borrow_global_mut<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global_mut<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
 
         let agreement = table::borrow_mut(&mut registry.agreements, agreement_id);
@@ -287,7 +287,7 @@ module vaultlayer::escrow {
         agreement_id: u64,
         new_expiry_timestamp: u64,
     ) {
-        let registry = borrow_global_mut<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global_mut<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
 
         let agreement = table::borrow_mut(&mut registry.agreements, agreement_id);
@@ -311,7 +311,7 @@ module vaultlayer::escrow {
         vendor: &signer,
         agreement_id: u64,
     ) {
-        let registry = borrow_global_mut<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global_mut<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
 
         let agreement = table::borrow_mut(&mut registry.agreements, agreement_id);
@@ -336,7 +336,7 @@ module vaultlayer::escrow {
         _caller: &signer,
         agreement_id: u64,
     ) {
-        let registry = borrow_global_mut<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global_mut<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
 
         let agreement = table::borrow_mut(&mut registry.agreements, agreement_id);
@@ -367,14 +367,14 @@ module vaultlayer::escrow {
 
     #[view]
     public fun get_state(agreement_id: u64): u8 {
-        let registry = borrow_global<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
         table::borrow(&registry.agreements, agreement_id).state
     }
 
     #[view]
     public fun get_content_merkle_root(agreement_id: u64): vector<u8> {
-        let registry = borrow_global<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
         table::borrow(&registry.agreements, agreement_id).content_merkle_root
     }
@@ -382,7 +382,7 @@ module vaultlayer::escrow {
     /// Returns (expiry_timestamp, last_commit_at, eol_notice_at).
     #[view]
     public fun get_timestamps(agreement_id: u64): (u64, u64, u64) {
-        let registry = borrow_global<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
         let a = table::borrow(&registry.agreements, agreement_id);
         (a.expiry_timestamp, a.last_commit_at, a.eol_notice_at)
@@ -391,7 +391,7 @@ module vaultlayer::escrow {
     /// Returns true if a trigger condition is currently satisfied.
     #[view]
     public fun is_trigger_met(agreement_id: u64): bool {
-        let registry = borrow_global<GlobalRegistry>(@vaultlayer);
+        let registry = borrow_global<GlobalRegistry>(@covenant);
         assert!(table::contains(&registry.agreements, agreement_id), E_AGREEMENT_NOT_FOUND);
         let agreement = table::borrow(&registry.agreements, agreement_id);
         if (agreement.state != STATE_ACTIVE) { return false };

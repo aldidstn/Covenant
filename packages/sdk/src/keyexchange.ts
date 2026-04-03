@@ -1,5 +1,5 @@
 /**
- * VaultLayer Key Exchange — Ed25519/X25519 ECIES
+ * Covenant Key Exchange — Ed25519/X25519 ECIES
  *
  * Provides vendor-side key wrapping and buyer-side key unwrapping using
  * Curve25519 ECDH + AES-256-KW.

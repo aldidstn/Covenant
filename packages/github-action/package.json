@@ -1,7 +1,7 @@
 {
-  "name": "@vaultlayer/github-action",
+  "name": "@covenant/github-action",
   "version": "0.1.0",
-  "description": "GitHub Action — commit source code to VaultLayer escrow on every release",
+  "description": "GitHub Action — commit source code to Covenant escrow on every release",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@aptos-labs/ts-sdk": "^1.35.0",
-    "@vaultlayer/sdk": "workspace:*"
+    "@covenant/sdk": "workspace:*"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.3",

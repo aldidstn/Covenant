@@ -1,4 +1,4 @@
-export { VaultLayerClient } from './client.js';
+export { CovenantClient } from './client.js';
 export { verifyInclusionProof } from './merkle.js';
 export { generateKey } from './encryption.js';
 export {
@@ -9,7 +9,7 @@ export {
 } from './keyexchange.js';
 export type { WrappedKey } from './keyexchange.js';
 export type {
-  VaultLayerConfig,
+  CovenantConfig,
   CommitOptions,
   CommitResult,
   ProveInclusionOptions,
@@ -19,7 +19,7 @@ export type {
   MerkleTreeMeta,
 } from './types.js';
 export {
-  VaultLayerError,
+  CovenantError,
   ConfigurationError,
   ShelbyUploadError,
   ShelbyDownloadError,

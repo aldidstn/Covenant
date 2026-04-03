@@ -15,7 +15,7 @@ export interface AgreementMeta {
 // ─── Storage key ─────────────────────────────────────────────────────────────
 
 function key(walletAddress: string) {
-  return `vaultlayer:agreements:${walletAddress.toLowerCase()}`;
+  return `covenant:agreements:${walletAddress.toLowerCase()}`;
 }
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────

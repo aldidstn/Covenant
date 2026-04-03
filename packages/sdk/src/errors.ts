@@ -1,18 +1,18 @@
-export class VaultLayerError extends Error {
+export class CovenantError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'VaultLayerError';
+    this.name = 'CovenantError';
   }
 }
 
-export class ConfigurationError extends VaultLayerError {
+export class ConfigurationError extends CovenantError {
   constructor(message: string) {
     super(message);
     this.name = 'ConfigurationError';
   }
 }
 
-export class ShelbyUploadError extends VaultLayerError {
+export class ShelbyUploadError extends CovenantError {
   constructor(
     message: string,
     public readonly cause?: unknown,
@@ -22,7 +22,7 @@ export class ShelbyUploadError extends VaultLayerError {
   }
 }
 
-export class ShelbyDownloadError extends VaultLayerError {
+export class ShelbyDownloadError extends CovenantError {
   constructor(
     message: string,
     public readonly cause?: unknown,
@@ -32,21 +32,21 @@ export class ShelbyDownloadError extends VaultLayerError {
   }
 }
 
-export class EncryptionError extends VaultLayerError {
+export class EncryptionError extends CovenantError {
   constructor(message: string) {
     super(message);
     this.name = 'EncryptionError';
   }
 }
 
-export class ArchiveError extends VaultLayerError {
+export class ArchiveError extends CovenantError {
   constructor(message: string) {
     super(message);
     this.name = 'ArchiveError';
   }
 }
 
-export class MerkleError extends VaultLayerError {
+export class MerkleError extends CovenantError {
   constructor(message: string) {
     super(message);
     this.name = 'MerkleError';

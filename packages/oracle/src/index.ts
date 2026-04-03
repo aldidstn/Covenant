@@ -1,5 +1,5 @@
 /**
- * VaultLayer Non-Renewal Trigger Oracle
+ * Covenant Non-Renewal Trigger Oracle
  *
  * Polls Aptos for active escrow agreements whose trigger conditions are
  * satisfied, then submits `execute_trigger` permissionlessly.
@@ -9,7 +9,7 @@
  *
  * Configuration (via .env or environment variables):
  *   ORACLE_PRIVATE_KEY     — Ed25519 private key hex (the oracle's wallet)
- *   CONTRACT_ADDRESS       — Deployed vaultlayer::escrow module address
+ *   CONTRACT_ADDRESS       — Deployed covenant::escrow module address
  *   APTOS_NODE_URL         — Aptos fullnode RPC URL
  *   SEED_AGREEMENT_IDS     — Optional comma-separated IDs to watch from start
  *   POLL_INTERVAL_MS       — Poll interval in ms (default: 300000 = 5 min)
@@ -261,7 +261,7 @@ async function poll(state: PersistedState): Promise<void> {
 
 async function main(): Promise<void> {
   log('INFO', '─────────────────────────────────────────');
-  log('INFO', 'VaultLayer Trigger Oracle starting up');
+  log('INFO', 'Covenant Trigger Oracle starting up');
   log('INFO', `Oracle address  : ${oracle.accountAddress.toString()}`);
   log('INFO', `Contract        : ${CONTRACT_ADDRESS}`);
   log('INFO', `Node URL        : ${APTOS_NODE_URL}`);

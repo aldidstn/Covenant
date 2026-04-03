@@ -1,8 +1,8 @@
-name: 'VaultLayer Commit'
+name: 'Covenant Commit'
 description: >
   Archive HEAD, encrypt client-side, upload to Shelby Protocol, and record
-  the commit on the Aptos VaultLayer escrow smart contract.
-author: 'VaultLayer'
+  the commit on the Aptos Covenant escrow smart contract.
+author: 'Covenant'
 
 branding:
   icon: 'lock'
@@ -21,8 +21,8 @@ inputs:
     description: >
       AES-256-GCM encryption key, hex-encoded (64 hex chars = 32 bytes).
       The source archive is encrypted client-side with this key before upload —
-      VaultLayer never sees your source code.
-      Store as a GitHub Actions secret. Generate once with VaultLayerClient.generateKey().
+      Covenant never sees your source code.
+      Store as a GitHub Actions secret. Generate once with CovenantClient.generateKey().
     required: true
 
   encrypted-key:
@@ -56,7 +56,7 @@ inputs:
 
   contract-address:
     description: >
-      Aptos address where the VaultLayer escrow module is deployed,
+      Aptos address where the Covenant escrow module is deployed,
       e.g. "0x1234...abcd".
     required: true
 

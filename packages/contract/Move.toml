@@ -1,15 +1,15 @@
 [package]
-name = "vaultlayer"
+name = "covenant"
 version = "0.1.0"
-authors = ["VaultLayer"]
+authors = ["Covenant"]
 
 [addresses]
-# Filled in at deploy time via `aptos move publish --named-addresses vaultlayer=<addr>`.
+# Filled in at deploy time via `aptos move publish --named-addresses covenant=<addr>`.
 # During local testing, override in [dev-addresses] below.
-vaultlayer = "_"
+covenant = "_"
 
 [dev-addresses]
-vaultlayer = "0xcafe"
+covenant = "0xcafe"
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-core.git"

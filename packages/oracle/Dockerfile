@@ -11,11 +11,11 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/oracle/package.json ./packages/oracle/
 
 # Install only oracle production + dev dependencies
-RUN pnpm install --filter @vaultlayer/oracle --frozen-lockfile
+RUN pnpm install --filter @covenant/oracle --frozen-lockfile
 
 # Copy oracle source and build
 COPY packages/oracle ./packages/oracle
-RUN pnpm --filter @vaultlayer/oracle build
+RUN pnpm --filter @covenant/oracle build
 
 # ─── Runtime stage ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
@@ -29,7 +29,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/oracle/package.json ./packages/oracle/
 
 # Production dependencies only
-RUN pnpm install --filter @vaultlayer/oracle --frozen-lockfile --prod
+RUN pnpm install --filter @covenant/oracle --frozen-lockfile --prod
 
 # Copy compiled output from builder
 COPY --from=builder /app/packages/oracle/dist ./packages/oracle/dist
@@ -37,7 +37,7 @@ COPY --from=builder /app/packages/oracle/dist ./packages/oracle/dist
 WORKDIR /app/packages/oracle
 
 # State file persisted here — mount a volume so it survives container restarts:
-#   docker run -v vaultlayer-oracle-data:/app/packages/oracle/data ...
+#   docker run -v covenant-oracle-data:/app/packages/oracle/data ...
 VOLUME ["/app/packages/oracle/data"]
 
 ENV NODE_ENV=production

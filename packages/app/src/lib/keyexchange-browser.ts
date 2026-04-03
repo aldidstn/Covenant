@@ -1,5 +1,5 @@
 /**
- * Browser-native key exchange for VaultLayer buyers.
+ * Browser-native key exchange for Covenant buyers.
  *
  * Mirrors packages/sdk/src/keyexchange.ts but uses Web Crypto API exclusively,
  * so it runs in-browser without any Node.js dependencies.
@@ -50,7 +50,7 @@ function toAB(u8: Uint8Array): ArrayBuffer {
  *   2. Take the low 32 bytes.
  *   3. Clamp per RFC 8032 §5.1.5.
  *
- * This matches the Node.js implementation in @vaultlayer/sdk.
+ * This matches the Node.js implementation in @covenant/sdk.
  */
 export async function ed25519PrivateToX25519Browser(
   ed25519PrivateSeedHex: string,
@@ -268,7 +268,7 @@ export interface WrappedKeyBrowser {
   encryptedKeyHex: string;
   /**
    * Hex-encoded raw 32-byte AES-256-GCM archive key.
-   * The vendor must store this as a GitHub Action secret (VAULTLAYER_ENCRYPTION_KEY).
+   * The vendor must store this as a GitHub Action secret (COVENANT_ENCRYPTION_KEY).
    * Never share this — it protects the source archive.
    */
   rawAesKeyHex: string;

@@ -19,7 +19,7 @@ export function NavBar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <span className="text-brand font-mono text-lg font-bold tracking-tight">
-            VaultLayer
+            Covenant
           </span>
           <span className="rounded bg-brand/10 px-1.5 py-0.5 text-xs font-mono text-brand border border-brand/20">
             MVP

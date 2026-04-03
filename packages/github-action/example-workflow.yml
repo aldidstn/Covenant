@@ -1,20 +1,20 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# Example: VaultLayer escrow commit on every release tag
+# Example: Covenant escrow commit on every release tag
 #
-# Copy this file to your repo at:   .github/workflows/vaultlayer-commit.yml
+# Copy this file to your repo at:   .github/workflows/covenant-commit.yml
 #
 # Required repository secrets (Settings → Secrets → Actions):
-#   VAULTLAYER_SHELBY_PRIVATE_KEY  — hex Ed25519 private key for Shelby uploads
-#   VAULTLAYER_APTOS_PRIVATE_KEY   — hex Ed25519 private key to sign Aptos txs
-#   VAULTLAYER_ENCRYPTION_KEY      — 32-byte AES-256-GCM key, hex-encoded (64 chars)
-#   VAULTLAYER_ENCRYPTED_KEY       — AES key encrypted with buyer's public key, hex
+#   COVENANT_SHELBY_PRIVATE_KEY  — hex Ed25519 private key for Shelby uploads
+#   COVENANT_APTOS_PRIVATE_KEY   — hex Ed25519 private key to sign Aptos txs
+#   COVENANT_ENCRYPTION_KEY      — 32-byte AES-256-GCM key, hex-encoded (64 chars)
+#   COVENANT_ENCRYPTED_KEY       — AES key encrypted with buyer's public key, hex
 #
 # Required repository variables (Settings → Variables → Actions):
-#   VAULTLAYER_CONTRACT_ADDRESS    — deployed Aptos module address, e.g. 0xabcd…
-#   VAULTLAYER_AGREEMENT_ID        — numeric escrow agreement ID from the wizard
+#   COVENANT_CONTRACT_ADDRESS    — deployed Aptos module address, e.g. 0xabcd…
+#   COVENANT_AGREEMENT_ID        — numeric escrow agreement ID from the wizard
 # ──────────────────────────────────────────────────────────────────────────────
 
-name: VaultLayer Escrow Commit
+name: Covenant Escrow Commit
 
 on:
   push:
@@ -25,8 +25,8 @@ permissions:
   contents: read       # git archive only needs read access
 
 jobs:
-  vaultlayer-commit:
-    name: Commit to VaultLayer Escrow
+  covenant-commit:
+    name: Commit to Covenant Escrow
     runs-on: ubuntu-latest
 
     steps:
@@ -35,21 +35,21 @@ jobs:
         with:
           fetch-depth: 0   # full history so git archive works correctly
 
-      - name: Commit source code to VaultLayer escrow
-        id: vaultlayer
+      - name: Commit source code to Covenant escrow
+        id: covenant
         uses: aldidstn/Covenant/packages/github-action@main
         with:
           # ── Shelby / encryption ─────────────────────────────────────────────
-          shelby-private-key:  ${{ secrets.VAULTLAYER_SHELBY_PRIVATE_KEY }}
-          encryption-key:      ${{ secrets.VAULTLAYER_ENCRYPTION_KEY }}
-          encrypted-key:       ${{ secrets.VAULTLAYER_ENCRYPTED_KEY }}
-          shelby-api-key:      ${{ secrets.VAULTLAYER_SHELBY_API_KEY }}   # optional
+          shelby-private-key:  ${{ secrets.COVENANT_SHELBY_PRIVATE_KEY }}
+          encryption-key:      ${{ secrets.COVENANT_ENCRYPTION_KEY }}
+          encrypted-key:       ${{ secrets.COVENANT_ENCRYPTED_KEY }}
+          shelby-api-key:      ${{ secrets.COVENANT_SHELBY_API_KEY }}   # optional
           expiration-days:     '730'    # keep blobs for 2 years
 
           # ── Aptos contract ──────────────────────────────────────────────────
-          aptos-private-key:   ${{ secrets.VAULTLAYER_APTOS_PRIVATE_KEY }}
-          contract-address:    ${{ vars.VAULTLAYER_CONTRACT_ADDRESS }}
-          agreement-id:        ${{ vars.VAULTLAYER_AGREEMENT_ID }}
+          aptos-private-key:   ${{ secrets.COVENANT_APTOS_PRIVATE_KEY }}
+          contract-address:    ${{ vars.COVENANT_CONTRACT_ADDRESS }}
+          agreement-id:        ${{ vars.COVENANT_AGREEMENT_ID }}
           # aptos-node-url defaults to mainnet; override for testnet:
           # aptos-node-url: 'https://fullnode.testnet.aptoslabs.com/v1'
 
@@ -60,7 +60,7 @@ jobs:
 
       - name: Print commit summary
         run: |
-          echo "Blob name          : ${{ steps.vaultlayer.outputs.blob-name }}"
-          echo "Content Merkle root: ${{ steps.vaultlayer.outputs.content-merkle-root }}"
-          echo "Shelby Merkle root : ${{ steps.vaultlayer.outputs.shelby-merkle-root }}"
-          echo "Shelby account     : ${{ steps.vaultlayer.outputs.account-address }}"
+          echo "Blob name          : ${{ steps.covenant.outputs.blob-name }}"
+          echo "Content Merkle root: ${{ steps.covenant.outputs.content-merkle-root }}"
+          echo "Shelby Merkle root : ${{ steps.covenant.outputs.shelby-merkle-root }}"
+          echo "Shelby account     : ${{ steps.covenant.outputs.account-address }}"

@@ -21,7 +21,7 @@ import {
   ArchiveError,
 } from './errors.js';
 import type {
-  VaultLayerConfig,
+  CovenantConfig,
   CommitOptions,
   CommitResult,
   ProveInclusionOptions,
@@ -34,11 +34,11 @@ import type {
 const META_SUFFIX = '__meta';
 const DEFAULT_EXPIRATION_DAYS = 365;
 
-export class VaultLayerClient {
+export class CovenantClient {
   private readonly shelby: ShelbyNodeClient;
   private readonly signer: Account;
 
-  constructor(config: VaultLayerConfig) {
+  constructor(config: CovenantConfig) {
     if (!config.shelbyPrivateKey) {
       throw new ConfigurationError('shelbyPrivateKey is required.');
     }
